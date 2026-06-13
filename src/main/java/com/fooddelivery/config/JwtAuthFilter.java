@@ -1,0 +1,100 @@
+package com.fooddelivery.config;
+
+import com.fooddelivery.service.JwtService;
+import com.fooddelivery.util.JwtUtil;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+@Component
+public class JwtAuthFilter extends OncePerRequestFilter {
+    
+    @Autowired
+    private JwtUtil jwtUtil;
+    
+    @Autowired
+    private JwtService jwtService;
+    
+    // List of public endpoints that don't need token validation
+    private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/products",
+        "/api/categories",
+        "/health"
+    );
+    
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, 
+                                   HttpServletResponse response, 
+                                   FilterChain filterChain)
+            throws ServletException, IOException {
+        
+        String requestURI = request.getRequestURI();
+        System.out.println("🔐 JWT Filter - Request: " + request.getMethod() + " " + requestURI);
+        
+        // Skip token validation for public endpoints
+        if (isPublicEndpoint(requestURI)) {
+            System.out.println("🌐 Public endpoint, skipping token validation: " + requestURI);
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
+        String authHeader = request.getHeader("Authorization");
+        String token = null;
+        String username = null;
+        
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+            try {
+                username = jwtUtil.extractUsername(token);
+                System.out.println("🔐 Extracted username: " + username);
+            } catch (Exception e) {
+                System.out.println("❌ Token validation error: " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"error\": \"Invalid or expired token\"}");
+                return;
+            }
+        }
+        
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = jwtService.loadUserByUsername(username);
+            
+            if (jwtUtil.validateToken(token, userDetails)) {
+                UsernamePasswordAuthenticationToken authToken = 
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+                System.out.println("✅ Authentication successful for: " + username);
+            } else {
+                System.out.println("❌ Token validation failed for: " + username);
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"error\": \"Invalid token\"}");
+                return;
+            }
+        }
+        
+        filterChain.doFilter(request, response);
+    }
+    
+    private boolean isPublicEndpoint(String requestURI) {
+        for (String endpoint : PUBLIC_ENDPOINTS) {
+            if (requestURI.contains(endpoint)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
