@@ -160,11 +160,11 @@ WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'priya.patel@example.com');
 -- ============================================
 -- VERIFY DATA (Shows counts - PostgreSQL compatible)
 -- ============================================
-SELECT 'CATEGORIES' AS Table_Name, COUNT(*) AS Record_Count FROM categories
+SELECT 'CATEGORIES' AS Table_Name, COUNT(*)::integer AS Record_Count FROM categories
 UNION ALL
-SELECT 'PRODUCTS', COUNT(*) FROM products
+SELECT 'PRODUCTS', COUNT(*)::integer FROM products
 UNION ALL
-SELECT 'USERS', COUNT(*) FROM users;
+SELECT 'USERS', COUNT(*)::integer FROM users;
 
 -- ============================================
 -- SHOW PRODUCTS BY CATEGORY (Verification query)

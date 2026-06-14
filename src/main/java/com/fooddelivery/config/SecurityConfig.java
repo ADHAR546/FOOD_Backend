@@ -63,7 +63,7 @@ public class SecurityConfig {
             "http://localhost:5173",      // Local Vite
             "http://localhost:5174",      // Local Vite (alternative)
             "http://localhost:3000",       // Local React
-            "https://food-frontend-git-main-adhar-tyagi.vercel.app//"  // ✅ Your production frontend
+            "https://food-frontend-git-main-adhar-tyagi.vercel.app/"  // ✅ Your production frontend
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
